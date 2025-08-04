@@ -1,4 +1,5 @@
 # Google-sheets-invoice-automation
+# function addInvoiceRecordWithPaymentHandling()
 
 This Google Apps Script automates invoice registration in a Google Sheet.  
 It supports dynamic data entry and updates multiple sheets based on payment method.
