@@ -1,0 +1,139 @@
+function addInvoiceRecordWithPaymentHandling() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("发票");
+  const ui = SpreadsheetApp.getUi();
+
+  // ===== ① 用户输入 =====
+  const client = ui.prompt("请输入客户名称（如不填默认“散客”）：").getResponseText();
+  const finalClient = client.trim() === "" ? "散客" : client.trim();
+
+  const amountText = ui.prompt("请输入金额（数字）:").getResponseText();
+  const amount = parseFloat(amountText.replace(',', '.'));
+  if (isNaN(amount)) {
+    ui.alert("金额输入有误，请输入有效数字。");
+    return;
+  }
+
+  const remark = ui.prompt("请输入备注：").getResponseText();
+  const group = ui.prompt("请输入团号：").getResponseText();
+  const payment = ui.prompt("请输入付款方式（如 ESP600 CV800）：").getResponseText();
+
+  Logger.log("① 用户输入 - 客户: %s, 金额: %s, 备注: %s, 团号: %s, 付款方式: %s", finalClient, amount, remark, group, payment);
+
+  const todayDate = new Date();
+
+  // ===== 发票号生成 =====
+  const lastRow = sheet.getLastRow();
+  const lastInvoiceNo = sheet.getRange(lastRow, 2).getValue();
+  const nextInvoiceNo = generateNextInvoiceNo(lastInvoiceNo);
+
+  const newRow = [
+    todayDate,
+    nextInvoiceNo,
+    finalClient,
+    amount,
+    remark,
+    group,
+    payment,
+    "",      // 到账日期
+    "ok"
+  ];
+
+  // 插入发票行
+  sheet.insertRowAfter(lastRow);
+  const targetRow = lastRow + 1;
+  const targetRange = sheet.getRange(targetRow, 1, 1, 9);
+  targetRange.setValues([newRow]);
+
+  const sourceRange = sheet.getRange(lastRow, 1, 1, 9);
+  sourceRange.copyTo(targetRange, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+  sheet.getRange(targetRow, 1).setNumberFormat("dd.MM.yyyy");
+
+  Logger.log("② 发票记录已插入 - 发票号: %s, 行号: %s", nextInvoiceNo, targetRow);
+
+  // ===== 处理付款方式 =====
+  const payField = payment.trim().toUpperCase();
+  const invoiceNo = nextInvoiceNo;
+  const note = remark;
+  const today = todayDate;
+  const formattedDate = Utilities.formatDate(today, ss.getSpreadsheetTimeZone(), "dd.MM.yyyy");
+
+  // ESP → 现金日结
+  const espMatch = payField.match(/ESP\s*([0-9]+(?:\.[0-9]+)?)/);
+  if (espMatch) {
+    const espAmount = parseFloat(espMatch[1]);
+    const cashSheet = ss.getSheetByName("现金日结");
+    const cashLastRow = cashSheet.getLastRow();
+    const lastTotal = parseFloat(cashSheet.getRange(cashLastRow, 3).getValue()) || 0;
+    const newTotal = lastTotal + espAmount;
+
+    const newCashRow = [today, espAmount, newTotal, note, invoiceNo];
+    const cashInsertRow = cashLastRow + 1;
+    cashSheet.insertRowAfter(cashLastRow);
+    const cashTargetRange = cashSheet.getRange(cashInsertRow, 1, 1, 5);
+    cashTargetRange.setValues([newCashRow]);
+    const cashSourceRange = cashSheet.getRange(cashLastRow, 1, 1, 5);
+    cashSourceRange.copyTo(cashTargetRange, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+    cashSheet.getRange(cashInsertRow, 1).setNumberFormat("dd.MM.yyyy");
+
+    // 更新到账备注到发票 H 列
+    const espNote = `ESP${espMatch[1]} RECU LE ${formattedDate}`;
+    sheet.getRange(targetRow, 8).setValue(espNote);
+    Logger.log("③ 写入现金日结 - 金额: %s, 新总金额: %s, 到账备注: %s", espAmount, newTotal, espNote);
+  }
+
+  // CV → 旅游支票
+  const cvMatch = payField.match(/CV\s*([0-9]+(?:\.[0-9]+)?)/);
+  if (cvMatch) {
+    const cvAmount = parseFloat(cvMatch[1]);
+    const cvSheet = ss.getSheetByName("旅游支票");
+    const cvLastRow = cvSheet.getLastRow();
+    const newCVRow = [today, cvAmount, note, invoiceNo];
+    const cvInsertRow = cvLastRow + 1;
+    cvSheet.insertRowAfter(cvLastRow);
+    const cvTargetRange = cvSheet.getRange(cvInsertRow, 1, 1, 4);
+    cvTargetRange.setValues([newCVRow]);
+    const cvSourceRange = cvSheet.getRange(cvLastRow, 1, 1, 4);
+    cvSourceRange.copyTo(cvTargetRange, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+    cvSheet.getRange(cvInsertRow, 1).setNumberFormat("dd.MM.yyyy");
+
+    Logger.log("④ 写入旅游支票 - 金额: %s, 发票号: %s", cvAmount, invoiceNo);
+  }
+  
+  //CV → 支票
+  const chqMatch = payField.match(/CHQ\s*([0-9]+(?:\.[0-9]+)?)/);
+  if (chqMatch) {
+  const chqAmount = parseFloat(chqMatch[1]);
+  const chqSheet = ss.getSheetByName("支票");
+  const chqLastRow = chqSheet.getLastRow();
+  const chqInsertRow = chqLastRow + 1;
+  const chqRemark = invoiceNo + " " + note;
+
+  const newCHQRow = [today, chqAmount, chqRemark];
+
+  chqSheet.insertRowAfter(chqLastRow);
+  const chqTargetRange = chqSheet.getRange(chqInsertRow, 1, 1, 3);
+  chqTargetRange.setValues([newCHQRow]);
+
+  // 复制上一行格式
+  const chqSourceRange = chqSheet.getRange(chqLastRow, 1, 1, 3);
+  chqSourceRange.copyTo(chqTargetRange, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+  chqSheet.getRange(chqInsertRow, 1).setNumberFormat("dd/MM/yyyy");
+
+  Logger.log("⑤ 写入支票表 - 金额: %s, 发票号: %s, 备注: %s", chqAmount, invoiceNo, chqRemark);
+  }
+
+  ui.alert("✅ 发票添加成功：" + nextInvoiceNo);
+}
+
+// ===== 发票号生成函数 =====
+function generateNextInvoiceNo(currentNo) {
+  const match = currentNo.match(/^(FA2025)(\d{4})$/);
+  if (!match) {
+    throw new Error("当前发票号格式不正确，必须为 FA2025XXXX 形式");
+  }
+  const prefix = match[1];         // FA2025
+  const number = parseInt(match[2]); // 1640
+  const nextNumber = number + 1;
+  return prefix + nextNumber.toString().padStart(4, '0');  // FA20251641
+}
