@@ -1,0 +1,42 @@
+function addCVNote_Final() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const invoiceSheet = ss.getSheetByName("发票");         // 要添加备注的表
+  const chequeSheet = ss.getSheetByName("旅游支票");     // 来源表
+
+  const startRow = 429;
+  const endRow = 442;
+
+  const invoiceData = invoiceSheet.getDataRange().getValues();
+
+  // ✅ 获取动态当天日期（格式为 dd/MM/yyyy）
+  const today = Utilities.formatDate(new Date(), "GMT+2", "dd/MM/yyyy");
+
+  for (let row = startRow; row <= endRow; row++) {
+    const amount = chequeSheet.getRange(row, 2).getValue(); // B列 = 金额
+    const invoiceNumber = chequeSheet.getRange(row, 4).getValue()?.toString().trim(); // D列 = 发票号
+
+    if (!invoiceNumber || !amount) {
+      Logger.log(`跳过第 ${row} 行（缺少金额或发票号）`);
+      continue;
+    }
+
+    let matched = false;
+    for (let i = 1; i < invoiceData.length; i++) {
+      const currentInvoice = invoiceData[i][1]?.toString().trim(); // 发票表 B列 = 发票号
+      if (currentInvoice === invoiceNumber) {
+        const oldNote = invoiceData[i][7]?.toString().trim() || ""; // H列 = 备注
+        const newFragment = `${amount} RECU LE ${today}`;
+        const newNote = oldNote.includes(newFragment) ? oldNote : `${oldNote} ${newFragment}`.trim();
+
+        invoiceSheet.getRange(i + 1, 8).setValue(newNote); // 写入发票表 H列
+        Logger.log(`已更新发票 ${invoiceNumber}：${newNote}`);
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      Logger.log(`未找到匹配的发票号：${invoiceNumber}`);
+    }
+  }
+}
