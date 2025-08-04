@@ -21,20 +21,53 @@ It supports dynamic data entry and updates multiple sheets based on payment meth
 
 - Google Apps Script (JavaScript-based)
 
-- Key Knowledge Points
+🧠 Key Knowledge Points
 
-    String Parsing in JavaScript: Extracting numeric values based on keywords (e.g. using regex for ESP\d+)
+This project leverages Google Apps Script to automate invoice and payment record handling across multiple sheets. Below are the core concepts demonstrated:
+✅ 1. Date Handling in Google Apps Script
 
-    Date Handling: Formatting dates as dd/MM/yyyy using JavaScript's Utilities.formatDate
+    Generate today's date dynamically:
 
-    Sheet Manipulation:
+    const today = Utilities.formatDate(new Date(), "GMT+2", "dd/MM/yyyy");
 
-        getLastRow(), appendRow(), and getRange() to interact with specific cells and rows
+    Custom formatting ensures locale-specific display (e.g., dd/MM/yyyy for French-style dates).
 
-        Updating other sheets based on input from one main form
+✅ 2. String Parsing with Regular Expressions
 
-    Logging & Debugging: Logger.log() used to trace actions and ensure script runs correctly
+    Extract numeric values from strings like ESP600 CV800:
 
+    const matches = paymentStr.match(/ESP(\d+)/);
+    const amount = matches ? parseFloat(matches[1]) : null;
+
+    Handles multiple payment methods in a single string.
+
+✅ 3. Conditional Logic and Branching
+
+    Determine which payment method is included (ESP, CV, CHQ) and take appropriate action:
+
+    if (paymentMethod.includes("ESP")) { /* update cash sheet */ }
+    if (paymentMethod.includes("CV"))  { /* update travel voucher sheet */ }
+    if (paymentMethod.includes("CHQ")) { /* update cheque sheet */ }
+
+✅ 4. Inter-Sheet Data Interaction
+
+    Append rows to different sheets based on parsed payment methods using:
+
+    targetSheet.appendRow([today, amount, note, invoiceNo]);
+
+    Ensures each financial movement is tracked in the appropriate ledger.
+
+✅ 5. Auto-Incrementing Invoice Numbers
+
+    Determine the last used invoice number and generate the next in sequence:
+
+    const lastRow = invoiceSheet.getLastRow();
+    const lastInvoice = invoiceSheet.getRange(lastRow, 2).getValue();
+    const nextInvoice = generateNextInvoiceNo(lastInvoice);
+
+✅ 6. Logging for Debugging and Monitoring
+
+    Uses Logger.log() to trace execution steps and capture values at key stages.
 
 
 ## addCVNote_Final()
