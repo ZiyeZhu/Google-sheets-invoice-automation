@@ -1,10 +1,10 @@
-## Google-sheets-invoice-automation
-# function addInvoiceRecordWithPaymentHandling()
+# Google-sheets-invoice-automation
+## function addInvoiceRecordWithPaymentHandling()
 
 This Google Apps Script automates invoice registration in a Google Sheet.  
 It supports dynamic data entry and updates multiple sheets based on payment method.
 
-## 📋 Features
+### 📋 Features
 
 - Add a new invoice row with auto-generated invoice number and today's date
 - Fill in client, amount, group ID, remarks, and payment method interactively
@@ -17,7 +17,7 @@ It supports dynamic data entry and updates multiple sheets based on payment meth
 - Update payment receipt column with formatted note
 - Logging via `Logger.log()`
 
-## 🧠 Tech
+### 🧠 Tech
 
 - Google Apps Script (JavaScript-based)
 
@@ -37,7 +37,7 @@ It supports dynamic data entry and updates multiple sheets based on payment meth
 
 
 
-# addCVNote_Final()
+## addCVNote_Final()
 🔁 Function: addCVNote_Final()
 
 This function updates the Remarks column in the Invoices sheet based on payment records from the Travel Voucher sheet. It adds a timestamped confirmation note (e.g., 600 RECU LE 04/08/2025) to invoices that have been paid via travel vouchers.
