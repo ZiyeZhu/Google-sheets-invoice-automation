@@ -19,3 +19,17 @@ It supports dynamic data entry and updates multiple sheets based on payment meth
 ## 🧠 Tech
 
 - Google Apps Script (JavaScript-based)
+
+- Key Knowledge Points
+
+    String Parsing in JavaScript: Extracting numeric values based on keywords (e.g. using regex for ESP\d+)
+
+    Date Handling: Formatting dates as dd/MM/yyyy using JavaScript's Utilities.formatDate
+
+    Sheet Manipulation:
+
+        getLastRow(), appendRow(), and getRange() to interact with specific cells and rows
+
+        Updating other sheets based on input from one main form
+
+    Logging & Debugging: Logger.log() used to trace actions and ensure script runs correctly
